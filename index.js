@@ -75,7 +75,7 @@ function graceVhost(host, app) {
 
     if (vhost) return yield * vhost.middleware.call(this, next);
 
-    yield * next;
+    yield* next;
   }
 };
 
