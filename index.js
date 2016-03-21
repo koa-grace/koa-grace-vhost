@@ -73,6 +73,9 @@ function graceVhost(host, app) {
       return false;
     });
 
+    // merge vhost.app.context to current context
+    Object.assign(this, vhost.app.context);
+
     if (vhost) return yield * vhost.middleware.call(this, next);
 
     yield* next;
