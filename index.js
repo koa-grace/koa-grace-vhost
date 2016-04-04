@@ -4,30 +4,6 @@ const assert = require('assert');
 const debug = require('debug')('koa-grace:vhost');
 const compose = require('koa-compose');
 
-function _isRegExp(obj) {
-  return obj.constructor && obj.constructor.name === 'RegExp';
-}
-
-function _checkParams(host, app) {
-  return (typeof host === 'string' || _isRegExp(host)) && app && app.middleware && Array.isArray(app.middleware);
-}
-
-function _checkHost(host) {
-
-  if (!Array.isArray(host)) {
-    return false;
-  }
-
-  return host.every(function(vhost) {
-
-    var ret = !!vhost && _checkParams(vhost.host, vhost.app);
-
-    debug('vhost: %s check %s', vhost.host, ret ? 'success' : 'failed');
-
-    return ret;
-  });
-}
-
 function graceVhost(host, app) {
   assert.ok(!!host, 'at least need a vhost');
 
@@ -43,12 +19,12 @@ function graceVhost(host, app) {
   }
 
   // 'www.example.com', koaapp
-  if (_checkParams(host, app)) {
+  if (checkParams(host, app)) {
     vhosts.push({
       host: host,
       app: app
     });
-  } else if (_checkHost(host)) {
+  } else if (checkHost(host)) {
     vhosts = host;
   }
 
@@ -65,13 +41,20 @@ function graceVhost(host, app) {
 
     var vhost;
     vhosts.some(function(item) {
-      if (item.host === host || (_isRegExp(item.host) && item.host.test(host))) {
+      if (item.host === host || (isRegExp(item.host) && item.host.test(host))) {
         vhost = item;
         debug('matched host: %s', item.host);
         return true;
       }
       return false;
     });
+
+    if (!vhost) {
+      debug('there is no host match to ' + this.request.headers.host + this.request.url);
+      this.body = 'error: there is no host matched!';
+
+      return yield* next;
+    }
 
     // merge vhost.app.context to current context
     Object.assign(this, vhost.app.context);
@@ -80,6 +63,30 @@ function graceVhost(host, app) {
 
     yield* next;
   }
+};
+
+function isRegExp(obj) {
+  return obj.constructor && obj.constructor.name === 'RegExp';
+};
+
+function checkParams(host, app) {
+  return (typeof host === 'string' || isRegExp(host)) && app && app.middleware && Array.isArray(app.middleware);
+};
+
+function checkHost(host) {
+
+  if (!Array.isArray(host)) {
+    return false;
+  }
+
+  return host.every(function(vhost) {
+
+    var ret = !!vhost && checkParams(vhost.host, vhost.app);
+
+    debug('vhost: %s check %s', vhost.host, ret ? 'success' : 'failed');
+
+    return ret;
+  });
 };
 
 module.exports = graceVhost;
