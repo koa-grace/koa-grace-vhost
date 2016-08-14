@@ -36,24 +36,28 @@ function graceVhost(host, app) {
     vhost.middleware = compose(vhost.app.middleware);
   });
 
+  // 用以缓存vhost记录
+  var hostCache = {};
   return function* vhost(next) {
     var host = this.hostname;
 
-    var vhost;
-    vhosts.some(function(item) {
-      if (item.host === host || (isRegExp(item.host) && item.host.test(host))) {
-        vhost = item;
-        debug('matched host: %s', item.host);
-        return true;
-      }
-      return false;
-    });
+    var vhost = hostCache[host];
+    if (!vhost) {
+      vhosts.some(function(item) {
+        if (item.host === host || (isRegExp(item.host) && item.host.test(host))) {
+          vhost = hostCache[host] = item;
+          debug('matched host: %s', item.host);
+          return true;
+        }
+        return false;
+      });
+    }
 
     if (!vhost) {
       debug('there is no host match to ' + this.request.headers.host + this.request.url);
       this.body = 'error: there is no host matched!';
 
-      return yield* next;
+      return yield * next;
     }
 
     // merge vhost.app.context to current context
@@ -61,7 +65,7 @@ function graceVhost(host, app) {
 
     if (vhost) return yield * vhost.middleware.call(this, next);
 
-    yield* next;
+    yield * next;
   }
 };
 

@@ -1,6 +1,6 @@
 {
   "name": "koa-grace-vhost",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "KOA vhost中间件",
   "main": "index.js",
   "scripts": {
