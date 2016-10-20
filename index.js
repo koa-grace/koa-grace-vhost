@@ -7,7 +7,7 @@ const compose = require('koa-compose');
 function graceVhost(host, app) {
   assert.ok(!!host, 'at least need a vhost');
 
-  var vhosts = [];
+  let vhosts = [];
 
   // {
   //     host: 'www.example.com',
@@ -37,20 +37,41 @@ function graceVhost(host, app) {
   });
 
   // 用以缓存vhost记录
-  var hostCache = {};
+  let hostCache = {};
   return function* vhost(next) {
-    var host = this.hostname;
+    // 当前的hostname,不含端口号
+    let host = this.hostname;
+    // 限制只取第一层级的PATH
+    let path = this.path.split('/')[1] || '';
 
-    var vhost = hostCache[host];
+    // 获取当前的hostpath
+    let hostPath = host + '/' + path;
+    let vhost = hostCache[hostPath];
+
     if (!vhost) {
-      vhosts.some(function(item) {
-        if (item.host === host || (isRegExp(item.host) && item.host.test(host))) {
-          vhost = hostCache[host] = item;
-          debug('matched host: %s', item.host);
+      // 设置匹配缓存
+      let mapCache;
+
+      vhosts.some((item) => {
+        let isSubpath = ~item.host.indexOf('/');
+
+        if (isSubpath && item.host === hostPath) {
+          // 如果当前item.host配置是子目录模式，且等于hostPath，则不再往下查找，return true
+          mapCache = item;
           return true;
+        } else if (!isSubpath && item.host === host) {
+          // 如果当前item.host配置不是子目录模式，且等于host，则继续查找更适合的条件，return false
+          mapCache = item;
+          return false;
+        } else {
+          return false;
         }
-        return false;
       });
+
+      if (mapCache) {
+        vhost = hostCache[hostPath] = mapCache;
+        debug('matched host: %s', mapCache.host);
+      }
     }
 
     if (!vhost) {
@@ -85,7 +106,7 @@ function checkHost(host) {
 
   return host.every(function(vhost) {
 
-    var ret = !!vhost && checkParams(vhost.host, vhost.app);
+    let ret = !!vhost && checkParams(vhost.host, vhost.app);
 
     debug('vhost: %s check %s', vhost.host, ret ? 'success' : 'failed');
 

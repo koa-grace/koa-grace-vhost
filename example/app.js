@@ -6,7 +6,7 @@ const vhost = require('../index');
 
 let app = koa();
 
-let vhosts = ['127.0.0.1', 'localhost'];
+let vhosts = ['127.0.0.1', 'localhost','localhost/test','127.0.0.1/test'];
 
 vhosts = vhosts.map(function(item) {
   try {
